@@ -58,15 +58,43 @@ cargo build --release       # 当前平台
 
 ## 用法
 
-```bash
-# 文件名规范时自动识别 uid,默认输出同目录 plain_*.db
-aweme-db-decrypt encrypted_<UID>_im.db
+工具有三个子命令:
 
-# 文件被改名,手动指定 uid
-aweme-db-decrypt -u <UID> dump.bin -o im.db --force
+| 子命令 | 用途 |
+|---|---|
+| `decrypt` | 把加密 DB 解密成 plaintext SQLite 文件落盘 |
+| `query`   | 直连加密 DB 跑一次性 SQL,结果打印到 stdout |
+| `shell`   | 直连加密 DB 进交互式 SQLite REPL |
+
+不带子命令时按 `decrypt` 解释,旧用法 `aweme-db-decrypt <file>` 不变。
+
+```bash
+# decrypt: 文件名规范时自动识别 uid,默认输出同目录 plain_*.db
+aweme-db-decrypt encrypted_<UID>_im.db
+aweme-db-decrypt decrypt encrypted_<UID>_im.db          # 等价
+aweme-db-decrypt -u <UID> dump.bin -o im.db --force     # 文件被改名时手动指定 uid
+
+# query: 一次性 SQL,默认对齐表格,可切换 --json / --csv
+aweme-db-decrypt query encrypted_<UID>_im.db \
+    -e "SELECT count(*) FROM msg"
+aweme-db-decrypt query encrypted_<UID>_im.db --json \
+    -e "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name LIMIT 5"
+aweme-db-decrypt query encrypted_<UID>_im.db --csv \
+    -e "SELECT * FROM conversation_core LIMIT 10" > convs.csv
+aweme-db-decrypt query encrypted_<UID>_im.db -f probes.sql
+
+# shell: 交互式 REPL,rustyline 历史保存到 ~/.aweme-db-decrypt-history
+aweme-db-decrypt shell encrypted_<UID>_im.db
+# sqlite> .tables
+# sqlite> .schema msg
+# sqlite> .mode json
+# sqlite> SELECT count(*) FROM msg WHERE deleted = 0;
+# sqlite> .exit
 ```
 
-完整选项见 `aweme-db-decrypt --help`。
+`query` / `shell` 默认只读;加 `--write` 允许 `INSERT/UPDATE/DELETE/DDL`,但所有改动只作用于内部临时副本,进程退出即丢弃 —— 持久化请用 `decrypt`。
+
+完整选项见 `aweme-db-decrypt --help` / `aweme-db-decrypt <subcommand> --help`。
 
 ---
 
