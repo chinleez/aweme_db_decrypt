@@ -1,8 +1,8 @@
 //! Shared "open an encrypted aweme.lite DB and hand back a live connection"
 //! entry point used by the `query` and `shell` subcommands.
 
-use crate::cipher::{apply_v3_pragmas, passphrase_for_uid, resolve_kind_uid, verify_open, DbKind};
-use crate::workdir::{nice_path, WorkDir};
+use super::cipher::{apply_v3_pragmas, passphrase_for_uid, resolve_kind_uid, verify_open, DbKind};
+use super::workdir::{nice_path, WorkDir};
 
 use anyhow::{anyhow, Context, Result};
 use rusqlite::{Connection, OpenFlags};

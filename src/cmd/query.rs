@@ -1,9 +1,9 @@
 //! `query` subcommand: run one or more SQL statements against an encrypted DB
 //! and print the result set(s) as a table (default), CSV, or JSON.
 
-use crate::open::{open_encrypted, OpenMode};
-use crate::output::{render, Format, ResultSet};
-use crate::sql_split::split_statements;
+use crate::db::open::{open_encrypted, OpenMode};
+use crate::fmt::output::{render, Format, ResultSet};
+use crate::fmt::sql_split::split_statements;
 
 use anyhow::{anyhow, bail, Context, Result};
 use clap::Args;

@@ -1,8 +1,8 @@
 //! `shell` subcommand: an interactive SQLite REPL backed by the decrypted
 //! scratch copy. Uses rustyline for history, line editing, and Ctrl-R search.
 
-use crate::open::{open_encrypted, OpenMode};
-use crate::output::{render, Format, ResultSet};
+use crate::db::open::{open_encrypted, OpenMode};
+use crate::fmt::output::{render, Format, ResultSet};
 
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
@@ -125,7 +125,7 @@ fn show_schema(conn: &Connection, table: Option<&str>) -> Result<()> {
 fn run_read(conn: &Connection, path: &Path, fmt: Format) -> Result<()> {
     let body = std::fs::read_to_string(path)
         .with_context(|| format!("read {}", path.display()))?;
-    for stmt in crate::sql_split::split_statements(&body) {
+    for stmt in crate::fmt::sql_split::split_statements(&body) {
         if let Err(e) = exec_sql(conn, &stmt, fmt) {
             eprintln!("error: {e:#}");
         }
@@ -232,7 +232,7 @@ pub fn run(args: ShellArgs) -> Result<()> {
                 // Submit on a trailing `;` (after stripping line comments).
                 if buf.trim_end().ends_with(';') {
                     let _ = rl.add_history_entry(buf.as_str());
-                    for stmt in crate::sql_split::split_statements(&buf) {
+                    for stmt in crate::fmt::sql_split::split_statements(&buf) {
                         if let Err(e) = exec_sql(&opened.conn, &stmt, fmt) {
                             eprintln!("error: {e:#}");
                         }

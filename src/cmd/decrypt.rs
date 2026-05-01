@@ -1,9 +1,9 @@
 //! `decrypt` subcommand: produce a plaintext SQLite copy of the encrypted DB.
 
-use crate::cipher::{
+use crate::db::cipher::{
     apply_v3_pragmas, passphrase_for_uid, resolve_kind_uid, verify_open,
 };
-use crate::workdir::{nice_path, with_suffix, WorkDir};
+use crate::db::workdir::{nice_path, with_suffix, WorkDir};
 
 use anyhow::{anyhow, bail, Context, Result};
 use clap::Args;

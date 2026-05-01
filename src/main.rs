@@ -2,18 +2,13 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::ffi::OsString;
 
-mod cipher;
-mod decrypt;
-mod open;
-mod output;
-mod query;
-mod shell;
-mod sql_split;
-mod workdir;
+mod cmd;
+mod db;
+mod fmt;
 
-use decrypt::DecryptArgs;
-use query::QueryArgs;
-use shell::ShellArgs;
+use cmd::decrypt::{self, DecryptArgs};
+use cmd::query::{self, QueryArgs};
+use cmd::shell::{self, ShellArgs};
 
 #[derive(Parser, Debug)]
 #[command(
