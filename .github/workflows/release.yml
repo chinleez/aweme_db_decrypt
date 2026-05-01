@@ -63,8 +63,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ${{ matrix.apt }}
 
+      - name: Install Windows ARM perl
+        if: matrix.runner == 'windows-11-arm'
+        run: choco install -y strawberryperl
+
       - name: Build
-        shell: bash
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Stage artifact
