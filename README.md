@@ -18,19 +18,9 @@
 
 ---
 
-## 加解密参数
-
-- **算法**:AES-256-CBC + HMAC-SHA1 + PBKDF2-HMAC-SHA1,64000 iter,4096 page,file salt(SQLCipher v3 标准布局)
-- **密码**:`"byte" + uid + "imwcdb" + uid + "dance"`(UTF-8)
-
----
-
 ## 安装
 
 ### 下载预编译二进制(推荐)
-
-每个 tag 触发 CI 在 6 平台原生 runner 上构建并发到 Releases:
-<https://github.com/chinleez/aweme_db_decrypt/releases/latest>
 
 | 平台 | 文件 |
 |---|---|
@@ -42,17 +32,6 @@
 | Windows ARM64        | `aweme-db-decrypt-windows-arm64.exe` |
 
 下载后 `chmod +x`;macOS Gatekeeper 拦截就 `xattr -d com.apple.quarantine <file>`;校验 `shasum -a 256 -c SHA256SUMS --ignore-missing`。
-
-### 自己编译
-
-需要 Rust 1.70+,SQLCipher / OpenSSL 经 `bundled-sqlcipher-vendored-openssl` 静态打包,运行时无外部依赖:
-
-```bash
-cargo build --release       # 当前平台
-./build-all.sh              # 一键多平台,按已装 rustup target 产出到 dist/
-```
-
-6 平台全覆盖走 GitHub Actions:打 `v*` tag 即可。
 
 ---
 
@@ -107,28 +86,6 @@ adb shell "su -c 'cp /data/data/com.ss.android.ugc.aweme.lite/databases/encrypte
 adb pull /sdcard/encrypted_<UID>_im.db .
 adb pull /sdcard/encrypted_<UID>_im.db-wal .   # 有 WAL 则一起拉,工具会自动合并
 ```
-
----
-
-## 解出来怎么用
-
-明文是普通 SQLite 3 文件,任意工具直接打开。例:
-
-```sql
--- 最近 10 条消息(IM Core)
-SELECT
-    datetime(created_time/1000, 'unixepoch', 'localtime') AS time,
-    sender,
-    conversation_id,
-    substr(content, 1, 80) AS preview
-FROM msg
-WHERE deleted = 0
-ORDER BY created_time DESC
-LIMIT 10;
-```
-
-时间戳为毫秒级 epoch。
-
 ---
 
 ## 故障排查
@@ -142,29 +99,3 @@ LIMIT 10;
 | 拉文件 `Permission denied` | DB 在沙盒里,需 root 或 debuggable 包 |
 
 ---
-
-## 不依赖本工具:纯 sqlcipher CLI
-
-`brew install sqlcipher` 后:
-
-```bash
-sqlcipher encrypted_<UID>_im.db <<'SQL'
-PRAGMA key = 'byte<UID>imwcdb<UID>dance';
-PRAGMA cipher_use_hmac = 1;
-PRAGMA kdf_iter = 64000;
-PRAGMA cipher_page_size = 4096;
-PRAGMA cipher_hmac_algorithm = HMAC_SHA1;
-PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA1;
-ATTACH DATABASE 'plain.db' AS plain KEY '';
-SELECT sqlcipher_export('plain');
-DETACH DATABASE plain;
-SQL
-```
-
-> 不要写 `PRAGMA cipher_compatibility = 3` 或 `PRAGMA cipher = 'aes-256-cbc'` —— 前者默认参数与 WCDB 实际写入不一致,后者新版已弃用,会直接报 *file is not a database*。
-
----
-
-## 法律
-
-仅用于解密**自己**账号的本地数据(备份 / 迁移 / 取证)。不要拿去解别人的设备或 DB,涉《刑法》285、286 与《个人信息保护法》。与官方无关,厂商可能在新版本更换算法,届时本工具失效。
