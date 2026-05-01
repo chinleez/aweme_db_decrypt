@@ -30,8 +30,13 @@
 | Linux ARM64 (musl)   | `aweme-db-decrypt-linux-arm64` |
 | Windows x86_64       | `aweme-db-decrypt-windows-x86_64.exe` |
 | Windows ARM64        | `aweme-db-decrypt-windows-arm64.exe` |
+| Android arm64-v8a    | `aweme-db-decrypt-android-arm64` |
+| Android armeabi-v7a  | `aweme-db-decrypt-android-armv7` |
+| Android x86_64       | `aweme-db-decrypt-android-x86_64` |
 
 下载后 `chmod +x`;macOS Gatekeeper 拦截就 `xattr -d com.apple.quarantine <file>`;校验 `shasum -a 256 -c SHA256SUMS --ignore-missing`。
+
+Android 二进制是静态链接 SQLCipher / OpenSSL 的标准 ELF,minSdk 21(Android 5.0+),可直接在 Termux 或 root shell 下执行 —— 详见下方「在 Android 上跑」。
 
 ---
 
@@ -86,6 +91,40 @@ adb shell "su -c 'cp /data/data/com.ss.android.ugc.aweme.lite/databases/encrypte
 adb pull /sdcard/encrypted_<UID>_im.db .
 adb pull /sdcard/encrypted_<UID>_im.db-wal .   # 有 WAL 则一起拉,工具会自动合并
 ```
+
+---
+
+## 在 Android 上跑
+
+不想 pull 回桌面的话,直接把二进制送上手机就地解密。
+
+### 方式一:Termux(无需 root)
+
+```bash
+adb push aweme-db-decrypt-android-arm64 /sdcard/Download/
+# 在 Termux 里:
+cp /sdcard/Download/aweme-db-decrypt-android-arm64 ~/aweme-db-decrypt
+chmod +x ~/aweme-db-decrypt
+~/aweme-db-decrypt query encrypted_<UID>_im.db -e "SELECT count(*) FROM msg"
+```
+
+Termux 自身访问不到 `/data/data/com.ss.android.ugc.aweme.lite/`,DB 仍需先用 root 拷出来或 `adb pull` 后再 push 进 Termux。
+
+### 方式二:root 设备 + adb shell
+
+```bash
+adb push aweme-db-decrypt-android-arm64 /data/local/tmp/
+adb shell
+$ chmod +x /data/local/tmp/aweme-db-decrypt-android-arm64
+$ su -c '/data/local/tmp/aweme-db-decrypt-android-arm64 \
+    query /data/data/com.ss.android.ugc.aweme.lite/databases/encrypted_<UID>_im.db \
+    -e "SELECT count(*) FROM msg"'
+```
+
+`shell` 子命令在 adb shell 里也能用,但 rustyline 没有真终端时退化成行缓冲;想要 ↑↓ 历史的体验请走 Termux。
+
+ABI 怎么挑:`adb shell getprop ro.product.cpu.abi` 看一眼 —— 现代设备一般是 `arm64-v8a`(挑 `android-arm64`),老设备是 `armeabi-v7a`(挑 `android-armv7`),x86_64 模拟器选 `android-x86_64`。
+
 ---
 
 ## 故障排查

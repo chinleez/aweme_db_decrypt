@@ -27,11 +27,24 @@ triple_to_tag() {
         x86_64-pc-windows-gnu)      echo "windows-x86_64" ;;
         x86_64-pc-windows-msvc)     echo "windows-x86_64" ;;
         aarch64-pc-windows-msvc)    echo "windows-arm64" ;;
+        aarch64-linux-android)      echo "android-arm64" ;;
+        armv7-linux-androideabi)    echo "android-armv7" ;;
+        x86_64-linux-android)       echo "android-x86_64" ;;
         *)                          echo "$1" ;;
     esac
 }
 
 is_windows() { [[ "$1" == *-windows-* ]]; }
+is_android() { [[ "$1" == *-linux-android* ]]; }
+
+android_abi() {
+    case "$1" in
+        aarch64-linux-android)   echo "arm64-v8a" ;;
+        armv7-linux-androideabi) echo "armeabi-v7a" ;;
+        x86_64-linux-android)    echo "x86_64" ;;
+        i686-linux-android)      echo "x86" ;;
+    esac
+}
 
 build_one() {
     local triple=$1
@@ -73,6 +86,20 @@ build_one() {
                 CC_aarch64_unknown_linux_musl=aarch64-linux-musl-gcc \
                 AR_aarch64_unknown_linux_musl=aarch64-linux-musl-ar \
                 cargo build --release --target "$triple"
+                ;;
+            *-linux-android* )
+                local ndk="${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-}}"
+                if [[ -z "$ndk" ]]; then
+                    echo "    skipped: ANDROID_NDK_HOME / ANDROID_NDK_ROOT not set"
+                    return 0
+                fi
+                if ! command -v cargo-ndk >/dev/null 2>&1; then
+                    echo "    skipped: cargo-ndk not on PATH (cargo install cargo-ndk)"
+                    return 0
+                fi
+                ANDROID_NDK_HOME="$ndk" \
+                cargo ndk -t "$(android_abi "$triple")" -p 21 \
+                    build --release --target "$triple"
                 ;;
             *)
                 cargo build --release --target "$triple"
