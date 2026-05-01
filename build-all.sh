@@ -98,7 +98,8 @@ build_one() {
                     return 0
                 fi
                 ANDROID_NDK_HOME="$ndk" \
-                cargo ndk -t "$(android_abi "$triple")" -p 21 \
+                ANDROID_NDK_ROOT="$ndk" \
+                cargo ndk -t "$(android_abi "$triple")" --platform 21 \
                     build --release --target "$triple"
                 ;;
             *)

@@ -87,6 +87,14 @@ jobs:
           ndk-version: r27c
           add-to-path: false
 
+      - name: Export NDK env
+        if: matrix.android_abi
+        run: |
+          # cargo-ndk reads ANDROID_NDK_HOME; openssl-src reads ANDROID_NDK_ROOT.
+          # Override both so the runner-bundled NDK doesn't conflict with ours.
+          echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
+
       - name: Install cargo-ndk
         if: matrix.android_abi
         uses: taiki-e/install-action@v2
@@ -95,9 +103,9 @@ jobs:
 
       - name: Build (Android)
         if: matrix.android_abi
-        env:
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-        run: cargo ndk -t ${{ matrix.android_abi }} -p 21 build --release --target ${{ matrix.target }}
+        # cargo-ndk 3.x dropped the short -p flag in favor of --platform;
+        # 21 is also the default, but pass it explicitly to pin minSdk.
+        run: cargo ndk -t ${{ matrix.android_abi }} --platform 21 build --release --target ${{ matrix.target }}
 
       - name: Build
         if: ${{ !matrix.android_abi }}
