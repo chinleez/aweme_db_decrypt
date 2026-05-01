@@ -1,5 +1,7 @@
 # aweme-db-decrypt
 
+[![release](https://github.com/chinleez/aweme_db_decrypt/actions/workflows/release.yml/badge.svg)](https://github.com/chinleez/aweme_db_decrypt/actions/workflows/release.yml)
+
 抖音极速版 (`com.ss.android.ugc.aweme.lite`) IM 加密数据库解密工具。
 
 把 WCDB 2 / SQLCipher v3 加密的 IM 库还原成标准 SQLite 文件,供任何 SQLite 客户端打开。
@@ -30,6 +32,40 @@
 
 ---
 
+## 安装
+
+### 从 GitHub Releases 下载预编译二进制(推荐)
+
+每个 tag 都会触发 CI 构建并发布 6 个平台的二进制,无需安装 Rust 工具链:
+
+<https://github.com/chinleez/aweme_db_decrypt/releases/latest>
+
+| 平台 | 文件 |
+|---|---|
+| macOS (Apple Silicon)  | `aweme-db-decrypt-macos-arm64` |
+| macOS (Intel)          | `aweme-db-decrypt-macos-x86_64` |
+| Linux x86_64 (静态)    | `aweme-db-decrypt-linux-x86_64` |
+| Linux ARM64 (静态)     | `aweme-db-decrypt-linux-arm64` |
+| Windows x86_64         | `aweme-db-decrypt-windows-x86_64.exe` |
+| Windows ARM64          | `aweme-db-decrypt-windows-arm64.exe` |
+
+Linux 的两个产物都是 musl 静态链接,任意发行版直接跑。下载后建议校验:
+
+```bash
+shasum -a 256 -c SHA256SUMS --ignore-missing
+```
+
+macOS 首次运行被 Gatekeeper 拦时:
+
+```bash
+xattr -d com.apple.quarantine ./aweme-db-decrypt-macos-arm64
+chmod +x ./aweme-db-decrypt-macos-arm64
+```
+
+Linux 同样需要 `chmod +x`。如果想要源码自行编译,见下面"构建"章节。
+
+---
+
 ## 构建
 
 需要 Rust 1.70+ 工具链。SQLCipher 与 OpenSSL 都通过 `bundled-sqlcipher-vendored-openssl` 静态编进二进制,**运行时无需系统装 sqlcipher / openssl**。
@@ -47,13 +83,16 @@
 2. 扫描 `rustup target list --installed` 里所有非 host 的 target,逐个交叉编译;缺工具链(比如 `x86_64-w64-mingw32-gcc`)的会跳过并给一行提示
 3. 把所有产物归集到 `dist/`,统一命名 `aweme-db-decrypt-<os>-<arch>[.exe]`,并打印 size + sha256 表
 
-实测一次输出:
+本地实测一次输出(macOS host + 已装的 cross targets):
 ```
 ==> dist/ contents:
+  aweme-db-decrypt-linux-x86_64                   7414992 bytes  a33674f0...
   aweme-db-decrypt-macos-arm64                    5691856 bytes  b50a7b97...
   aweme-db-decrypt-macos-x86_64                   6234388 bytes  bbdbe5ff...
   aweme-db-decrypt-windows-x86_64.exe             7293440 bytes  80601aef...
 ```
+
+> 6 平台全覆盖(含 linux-arm64 / windows-arm64)走 GitHub Actions:打 `v*` tag 后 `.github/workflows/release.yml` 会在原生 runner 上并行构建并自动发到 Releases。本地脚本只产出 host 上 `rustup target list --installed` 列出的 target。
 
 ### 单 target 手动构建
 
