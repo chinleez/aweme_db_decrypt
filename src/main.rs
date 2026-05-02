@@ -9,6 +9,7 @@ mod fmt;
 use cmd::decrypt::{self, DecryptArgs};
 use cmd::query::{self, QueryArgs};
 use cmd::shell::{self, ShellArgs};
+use cmd::watch::{self, WatchArgs};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -23,7 +24,8 @@ use cmd::shell::{self, ShellArgs};
                   Subcommands:\n  \
                   - decrypt   produce a plaintext SQLite copy on disk\n  \
                   - query     run SQL against the encrypted DB and print results\n  \
-                  - shell     interactive REPL against the encrypted DB\n\n\
+                  - shell     interactive REPL against the encrypted DB\n  \
+                  - watch     tail live messages directly from the encrypted DB\n\n\
                   When the first positional argument is not a subcommand it is \
                   forwarded to `decrypt`, so prior usage \
                   (`aweme-db-decrypt <file>`) keeps working.\n\n\
@@ -42,6 +44,8 @@ enum Command {
     Query(QueryArgs),
     /// Interactive SQLite REPL against the encrypted DB.
     Shell(ShellArgs),
+    /// Tail live IM messages directly from the encrypted DB.
+    Watch(WatchArgs),
 }
 
 /// Inject `decrypt` as the implicit subcommand when the user invoked the binary
@@ -52,7 +56,7 @@ enum Command {
 fn rewrite_argv(mut argv: Vec<OsString>) -> Vec<OsString> {
     // argv[0] is the binary name. Look at argv[1] to decide.
     let known: &[&str] = &[
-        "decrypt", "query", "shell", "help", "-h", "--help", "-V", "--version",
+        "decrypt", "query", "shell", "watch", "help", "-h", "--help", "-V", "--version",
     ];
     let needs_default = match argv.get(1).and_then(|s| s.to_str()) {
         None => false,            // bare invocation; let clap show its error
@@ -69,6 +73,7 @@ fn dispatch(cli: Cli) -> Result<()> {
         Command::Decrypt(a) => decrypt::run(a),
         Command::Query(a) => query::run(a),
         Command::Shell(a) => shell::run(a),
+        Command::Watch(a) => watch::run(a),
     }
 }
 

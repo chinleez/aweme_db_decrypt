@@ -25,6 +25,15 @@ pub struct OpenedDb {
     _work: WorkDir,
 }
 
+/// A live SQLCipher-decrypted connection opened directly on the source file.
+/// This is intended for Android-side tailing where the source DB keeps changing
+/// and a private copy would immediately become stale.
+pub struct DirectOpenedDb {
+    pub conn: Connection,
+    pub kind: DbKind,
+    pub uid: String,
+}
+
 pub fn open_encrypted(
     input: &Path,
     uid_override: Option<&str>,
@@ -66,4 +75,31 @@ pub fn open_encrypted(
     verify_open(&conn)?;
 
     Ok(OpenedDb { conn, kind, uid, _work: work })
+}
+
+pub fn open_encrypted_direct(input: &Path, uid_override: Option<&str>) -> Result<DirectOpenedDb> {
+    let input = nice_path(
+        input
+            .canonicalize()
+            .with_context(|| format!("input file not found: {}", input.display()))?,
+    );
+    let filename = input
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| anyhow!("invalid filename"))?;
+
+    let (kind, uid) = resolve_kind_uid(filename, uid_override)?;
+    let password = passphrase_for_uid(&uid);
+
+    let conn = Connection::open_with_flags(
+        &input,
+        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .with_context(|| format!("open failed: {}", input.display()))?;
+
+    conn.execute_batch("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;")?;
+    apply_v3_pragmas(&conn, &password)?;
+    verify_open(&conn)?;
+
+    Ok(DirectOpenedDb { conn, kind, uid })
 }

@@ -46,6 +46,11 @@ pub fn detect(filename: &str) -> Result<(DbKind, String)> {
     }
     if let Some(rest) = filename.strip_prefix("encrypted_") {
         let rest = rest.strip_prefix("sub_").unwrap_or(rest);
+        if let Some(uid) = rest.strip_suffix("_im_fts_split.db") {
+            if !uid.is_empty() && uid.chars().all(|c| c.is_ascii_digit()) {
+                return Ok((DbKind::ImCore, uid.to_string()));
+            }
+        }
         if let Some(uid) = rest.strip_suffix("_im.db") {
             if !uid.is_empty() && uid.chars().all(|c| c.is_ascii_digit()) {
                 return Ok((DbKind::ImCore, uid.to_string()));
